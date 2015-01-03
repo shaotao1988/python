@@ -2,16 +2,25 @@
 
 from asyncore import dispatcher
 from asynchat import async_chat
-import socket, asyncore
+import socket
+import asyncore
+
 
 PORT = 5005
 NAME = 'TestChat'
 
-class EndSession(Exception):    pass
+
+class EndSession(Exception):
+    pass
+
 
 class CommandHandler:
+    def __init__(self):
+        pass
+
     def unknown(self, session, cmd):
         session.push('Unknown command: %s\r\n' % cmd)
+
     def handle(self, session, line):
         if not line.strip():
             return
@@ -27,8 +36,10 @@ class CommandHandler:
         except TypeError:
             self.unknown(session, cmd)
 
+
 class Room(CommandHandler):
     def __init__(self, server):
+        CommandHandler.__init__(self)
         self.server = server
         self.sessions = []
 
@@ -44,6 +55,7 @@ class Room(CommandHandler):
 
     def do_logout(self, session, line):
         raise EndSession
+
 
 class LoginRoom(Room):
     def add(self, session):
@@ -63,6 +75,7 @@ class LoginRoom(Room):
         else:
             session.name = name
             session.enter(self.server.main_room)
+
 
 class ChatRoom(Room):
     def add(self, session):
@@ -87,12 +100,14 @@ class ChatRoom(Room):
         for name in self.server.users:
             session.push(name + '\r\n')
 
+
 class LogoutRoom(Room):
     def add(self, session):
         try:
             del self.server.users[session.name]
         except KeyError:
             pass
+
 
 class ChatSession(async_chat):
     def __init__(self, server, sock):
@@ -102,7 +117,7 @@ class ChatSession(async_chat):
         self.data = []
         self.name = None
         self.enter(LoginRoom(server))
-    
+
     def enter(self, room):
         try:
             cur = self.room
@@ -128,6 +143,7 @@ class ChatSession(async_chat):
         async_chat.handle_close(self)
         self.enter(LogoutRoom(self.server))
 
+
 class ChatServer(dispatcher):
     def __init__(self, port, name):
         dispatcher.__init__(self)
@@ -143,10 +159,10 @@ class ChatServer(dispatcher):
         conn, addr = self.accept()
         ChatSession(self, conn)
 
+
 if __name__ == '__main__':
     s = ChatServer(PORT, NAME)
     try:
         asyncore.loop()
     except KeyboardInterrupt:
         print
-
